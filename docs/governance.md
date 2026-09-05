@@ -14,3 +14,18 @@ Current limitation:
 
 - The initial DEV automation uses an SSH deploy key to update `homelab-gitops`.
 - A GitHub App or service account would provide better audit identity in a larger platform.
+
+Current repository controls:
+
+- Repository visibility is public.
+- `main` requires pull requests.
+- CODEOWNERS review is required.
+- The `check` status check is required.
+- Force pushes and branch deletion are blocked.
+- `@Dumberdore` may bypass only through pull requests for single-owner operability.
+
+GitHub Environments:
+
+- `dev`: unrestricted; used for automation-friendly development deployment.
+- `staging`: required reviewer is `@Dumberdore`.
+- `prod`: required reviewer is `@Dumberdore`.
