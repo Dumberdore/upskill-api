@@ -12,6 +12,7 @@ Kubernetes:
 
 - A Kustomize-managed Kubernetes Job runs `alembic upgrade head`.
 - Argo CD runs the Job as a PreSync hook.
+- A separate PostSync hook in `homelab-gitops` records a placeholder deployment notification after successful sync.
 - App pods do not run migrations during startup.
 
 Backward-compatible pattern:
