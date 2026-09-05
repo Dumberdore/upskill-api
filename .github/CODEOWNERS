@@ -1,0 +1,10 @@
+# Initial single-owner setup. Replace with app/platform teams as the reference grows.
+* @Dumberdore
+
+app/ @Dumberdore
+migrations/ @Dumberdore
+tests/ @Dumberdore
+Dockerfile @Dumberdore
+pyproject.toml @Dumberdore
+uv.lock @Dumberdore
+.github/workflows/ @Dumberdore

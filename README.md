@@ -52,6 +52,7 @@ Docs:
 - `docs/ci.md`
 - `docs/deployment.md`
 - `docs/gitops.md`
+- `docs/governance.md`
 - `docs/migrations.md`
 - `docs/operations.md`
 - `docs/production-mapping.md`
