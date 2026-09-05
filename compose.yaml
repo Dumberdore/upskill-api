@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: upskill
+      POSTGRES_PASSWORD: upskill
+      POSTGRES_DB: upskill
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upskill -d upskill"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:

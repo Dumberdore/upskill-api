@@ -1,0 +1,41 @@
+name: PR
+
+on:
+  pull_request:
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: upskill
+          POSTGRES_PASSWORD: upskill
+          POSTGRES_DB: upskill_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U upskill -d upskill_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy app
+      - run: uv run pip-audit
+      - run: RUN_INTEGRATION_TESTS=1 TEST_DATABASE_URL=postgresql+psycopg://upskill:upskill@localhost:5432/upskill_test uv run pytest
+      - run: docker build -t upskill-api:ci .

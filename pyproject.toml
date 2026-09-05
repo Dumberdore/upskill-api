@@ -1,0 +1,41 @@
+[project]
+name = "upskill-api"
+version = "0.1.0"
+description = "Production-like FastAPI reference service for homelab Kubernetes GitOps delivery."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.16.5",
+    "fastapi>=0.116.1",
+    "psycopg[binary]>=3.2.10",
+    "pydantic-settings>=2.10.1",
+    "sqlalchemy>=2.0.43",
+    "uvicorn[standard]>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=1.17.1",
+    "pip-audit>=2.9.0",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.12",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=app --cov-report=term-missing"

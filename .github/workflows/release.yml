@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_REPOSITORY: ghcr.io/dumberdore/upskill-api
+
+jobs:
+  release-dev:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: upskill
+          POSTGRES_PASSWORD: upskill
+          POSTGRES_DB: upskill_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U upskill -d upskill_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy app
+      - run: uv run pip-audit
+      - run: RUN_INTEGRATION_TESTS=1 TEST_DATABASE_URL=postgresql+psycopg://upskill:upskill@localhost:5432/upskill_test uv run pytest
+
+      - id: meta
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=sha-${short_sha}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ steps.meta.outputs.image_tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - uses: actions/checkout@v5
+        with:
+          repository: ${{ github.repository_owner }}/homelab-gitops
+          ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
+          path: homelab-gitops
+      - name: Update DEV image in GitOps
+        working-directory: homelab-gitops/apps/upskill-api/overlays/dev
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("kustomization.yaml")
+          text = path.read_text()
+          text = text.replace("newTag: sha-placeholder", "newTag: ${{ steps.meta.outputs.image_tag }}")
+          lines = text.splitlines()
+          for index, line in enumerate(lines):
+              if line.strip().startswith("newTag: sha-"):
+                  lines[index] = "    newTag: ${{ steps.meta.outputs.image_tag }}"
+          path.write_text("\n".join(lines) + "\n")
+          PY
+      - name: Commit GitOps change
+        working-directory: homelab-gitops
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/upskill-api/overlays/dev/kustomization.yaml
+          git commit -m "Deploy upskill-api ${{ steps.meta.outputs.image_tag }} to dev" || exit 0
+          git push origin main
